@@ -327,5 +327,90 @@ class TestMainIntegration(unittest.TestCase):
             mock_play.assert_not_called()
 
 
+class TestSendWebhook(unittest.TestCase):
+    """Test WeChat Work webhook notification logic."""
+
+    @patch("hooks.get_config_value")
+    def test_webhook_url_empty_skips(self, mock_config):
+        """No POST when webhookUrl is empty."""
+        mock_config.return_value = ""
+        with patch("hooks.urllib.request.urlopen") as mock_urlopen:
+            hooks.send_webhook("SessionStart", {"type": "SessionStart"})
+            mock_urlopen.assert_not_called()
+
+    @patch("hooks.get_config_value")
+    def test_webhook_event_disabled_skips(self, mock_config):
+        """No POST when per-event toggle is false."""
+        def config_side_effect(key, default=""):
+            if key == "webhookUrl":
+                return "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test-key"
+            if key == "webhookSessionStart":
+                return False
+            return default
+        mock_config.side_effect = config_side_effect
+        with patch("hooks.urllib.request.urlopen") as mock_urlopen:
+            hooks.send_webhook("SessionStart", {"type": "SessionStart"})
+            mock_urlopen.assert_not_called()
+
+    @patch("hooks.get_config_value")
+    def test_webhook_payload_format(self, mock_config):
+        """POST body matches WeChat Work API JSON structure."""
+        def config_side_effect(key, default=""):
+            if key == "webhookUrl":
+                return "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test-key"
+            if key == "webhookStop":
+                return True
+            return default
+        mock_config.side_effect = config_side_effect
+        with patch("hooks.urllib.request.urlopen") as mock_urlopen:
+            hooks.send_webhook("Stop", {"type": "Stop"})
+            mock_urlopen.assert_called_once()
+            call_args = mock_urlopen.call_args
+            request_obj = call_args[0][0]
+            self.assertEqual(request_obj.get_full_url(), "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test-key")
+            body = json.loads(request_obj.data.decode("utf-8"))
+            self.assertEqual(body["msgtype"], "text")
+            self.assertIn("content", body["text"])
+
+    @patch("hooks.get_config_value")
+    def test_webhook_builds_correct_message(self, mock_config):
+        """Text content includes emoji, event name, and timestamp."""
+        def config_side_effect(key, default=""):
+            if key == "webhookUrl":
+                return "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test-key"
+            if key == "webhookPreToolUse":
+                return True
+            return default
+        mock_config.side_effect = config_side_effect
+        with patch("hooks.urllib.request.urlopen") as mock_urlopen:
+            hooks.send_webhook("PreToolUse", {
+                "type": "PreToolUse",
+                "tool_name": "Bash",
+                "last_assistant_message": "running ls"
+            })
+            mock_urlopen.assert_called_once()
+            call_args = mock_urlopen.call_args
+            request_obj = call_args[0][0]
+            body = json.loads(request_obj.data.decode("utf-8"))
+            content = body["text"]["content"]
+            self.assertIn("PreToolUse", content)
+            self.assertIn("Bash", content)
+            self.assertIn("running ls", content)
+
+    @patch("hooks.get_config_value")
+    def test_webhook_timeout_fails_silently(self, mock_config):
+        """Timeout or exception does not raise."""
+        def config_side_effect(key, default=""):
+            if key == "webhookUrl":
+                return "https://qyapi.weixin.qq.com/cgi-bin/webhook/send?key=test-key"
+            if key == "webhookStop":
+                return True
+            return default
+        mock_config.side_effect = config_side_effect
+        with patch("hooks.urllib.request.urlopen", side_effect=Exception("timeout")):
+            # Should not raise
+            hooks.send_webhook("Stop", {"type": "Stop"})
+
+
 if __name__ == "__main__":
     unittest.main()
