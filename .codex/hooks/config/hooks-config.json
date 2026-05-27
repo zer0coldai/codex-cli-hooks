@@ -7,5 +7,14 @@
   "disableUserPromptSubmitHook": false,
   "disablePreCompactHook": false,
   "disablePostCompactHook": false,
-  "disableLogging": true
+  "disableLogging": true,
+  "webhookUrl": "",
+  "webhookSessionStart": true,
+  "webhookPreToolUse": true,
+  "webhookPermissionRequest": true,
+  "webhookPostToolUse": true,
+  "webhookStop": true,
+  "webhookUserPromptSubmit": true,
+  "webhookPreCompact": true,
+  "webhookPostCompact": true
 }
