@@ -43,6 +43,18 @@ HOOK_SOUND_MAP = {
     "PostCompact": "PostCompact",
 }
 
+# ===== HOOK EVENT TO WEBHOOK TOGGLE MAPPING =====
+HOOK_WEBHOOK_MAP = {
+    "SessionStart": "webhookSessionStart",
+    "PreToolUse": "webhookPreToolUse",
+    "PermissionRequest": "webhookPermissionRequest",
+    "PostToolUse": "webhookPostToolUse",
+    "Stop": "webhookStop",
+    "UserPromptSubmit": "webhookUserPromptSubmit",
+    "PreCompact": "webhookPreCompact",
+    "PostCompact": "webhookPostCompact",
+}
+
 # ===== HOOK EVENT TO CONFIG KEY MAPPING =====
 HOOK_CONFIG_MAP = {
     "SessionStart": "disableSessionStartHook",
