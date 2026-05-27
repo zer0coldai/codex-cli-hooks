@@ -21,6 +21,7 @@ import sys
 import json
 import subprocess
 import platform
+import urllib.request
 from pathlib import Path
 from datetime import datetime
 
@@ -252,6 +253,61 @@ def is_logging_disabled():
         True if logging is disabled, False otherwise
     """
     return get_config_value("disableLogging", default=False)
+
+
+def send_webhook(event_name, input_data):
+    """
+    Send a WeChat Work webhook notification for the given event.
+
+    Reads webhookUrl and per-event toggle from config. Skips silently
+    if URL is empty or event is disabled. Never raises — failures are
+    logged to stderr only.
+
+    Args:
+        event_name: The hook event name (e.g., "SessionStart")
+        input_data: The parsed input dict from stdin
+    """
+    try:
+        webhook_url = get_config_value("webhookUrl", default="")
+        if not webhook_url:
+            return
+
+        config_key = HOOK_WEBHOOK_MAP.get(event_name)
+        if not config_key:
+            return
+
+        if not get_config_value(config_key, default=True):
+            return
+
+        timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        lines = [
+            "\U0001f514 Codex CLI Hook",
+            f"\U0001f4cc 事件：{event_name}",
+            f"⏰ 时间：{timestamp}",
+        ]
+
+        tool_name = input_data.get("tool_name")
+        if tool_name:
+            lines.append(f"\U0001f527 工具：{tool_name}")
+
+        last_msg = input_data.get("last_assistant_message")
+        if last_msg:
+            lines.append(f"\U0001f4ac 消息：{last_msg}")
+
+        content = "\n".join(lines)
+        payload = json.dumps({
+            "msgtype": "text",
+            "text": {"content": content}
+        }, ensure_ascii=False).encode("utf-8")
+
+        req = urllib.request.Request(
+            webhook_url,
+            data=payload,
+            headers={"Content-Type": "application/json"}
+        )
+        urllib.request.urlopen(req, timeout=5)
+    except Exception as e:
+        print(f"Webhook failed: {e}", file=sys.stderr)
 
 
 def log_hook_data(hook_data):
