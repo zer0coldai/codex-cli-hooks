@@ -425,6 +425,9 @@ def main():
         if sound_name:
             play_sound(sound_name)
 
+        # Send webhook notification
+        send_webhook(event_type, input_data)
+
         sys.exit(0)
 
     except Exception as e:
