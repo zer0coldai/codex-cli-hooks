@@ -253,12 +253,13 @@ class TestLogHookData(unittest.TestCase):
 class TestMainIntegration(unittest.TestCase):
     """Integration tests for main() with different hook types."""
 
+    @patch("hooks.send_webhook")
     @patch("hooks.play_sound", return_value=True)
     @patch("hooks.is_hook_disabled", return_value=False)
     @patch("hooks.log_hook_data")
     @patch("hooks.get_session_context", return_value="Date: 2026-03-17\nGit branch: main")
     def test_session_start_outputs_context_and_plays_sound(
-        self, mock_context, mock_log, mock_disabled, mock_play
+        self, mock_context, mock_log, mock_disabled, mock_play, mock_webhook
     ):
         with patch("sys.argv", ["hooks.py", "--hook", "SessionStart"]):
             with self.assertRaises(SystemExit) as ctx:
@@ -266,65 +267,78 @@ class TestMainIntegration(unittest.TestCase):
             self.assertEqual(ctx.exception.code, 0)
             mock_context.assert_called_once()
             mock_play.assert_called_once_with("SessionStart")
+            mock_webhook.assert_called_once()
 
+    @patch("hooks.send_webhook")
     @patch("hooks.play_sound", return_value=True)
     @patch("hooks.is_hook_disabled", return_value=False)
     @patch("hooks.log_hook_data")
-    def test_session_stop_plays_sound(self, mock_log, mock_disabled, mock_play):
+    def test_session_stop_plays_sound(self, mock_log, mock_disabled, mock_play, mock_webhook):
         with patch("sys.argv", ["hooks.py", "--hook", "Stop"]):
             with self.assertRaises(SystemExit) as ctx:
                 hooks.main()
             self.assertEqual(ctx.exception.code, 0)
             mock_play.assert_called_once_with("Stop")
+            mock_webhook.assert_called_once()
 
+    @patch("hooks.send_webhook")
     @patch("hooks.play_sound", return_value=True)
     @patch("hooks.is_hook_disabled", return_value=False)
     @patch("hooks.log_hook_data")
-    def test_pre_tool_use_plays_sound(self, mock_log, mock_disabled, mock_play):
+    def test_pre_tool_use_plays_sound(self, mock_log, mock_disabled, mock_play, mock_webhook):
         with patch("sys.argv", ["hooks.py", "--hook", "PreToolUse"]):
             with self.assertRaises(SystemExit) as ctx:
                 hooks.main()
             self.assertEqual(ctx.exception.code, 0)
             mock_play.assert_called_once_with("PreToolUse")
+            mock_webhook.assert_called_once()
 
+    @patch("hooks.send_webhook")
     @patch("hooks.play_sound", return_value=True)
     @patch("hooks.is_hook_disabled", return_value=False)
     @patch("hooks.log_hook_data")
-    def test_post_tool_use_plays_sound(self, mock_log, mock_disabled, mock_play):
+    def test_post_tool_use_plays_sound(self, mock_log, mock_disabled, mock_play, mock_webhook):
         with patch("sys.argv", ["hooks.py", "--hook", "PostToolUse"]):
             with self.assertRaises(SystemExit) as ctx:
                 hooks.main()
             self.assertEqual(ctx.exception.code, 0)
             mock_play.assert_called_once_with("PostToolUse")
+            mock_webhook.assert_called_once()
 
+    @patch("hooks.send_webhook")
     @patch("hooks.play_sound", return_value=True)
     @patch("hooks.is_hook_disabled", return_value=False)
     @patch("hooks.log_hook_data")
-    def test_UserPromptSubmit_plays_sound(self, mock_log, mock_disabled, mock_play):
+    def test_UserPromptSubmit_plays_sound(self, mock_log, mock_disabled, mock_play, mock_webhook):
         with patch("sys.argv", ["hooks.py", "--hook", "UserPromptSubmit"]):
             with self.assertRaises(SystemExit) as ctx:
                 hooks.main()
             self.assertEqual(ctx.exception.code, 0)
             mock_play.assert_called_once_with("UserPromptSubmit")
+            mock_webhook.assert_called_once()
 
+    @patch("hooks.send_webhook")
     @patch("hooks.play_sound")
     @patch("hooks.is_hook_disabled", return_value=True)
     @patch("hooks.log_hook_data")
-    def test_disabled_hook_skips_sound(self, mock_log, mock_disabled, mock_play):
+    def test_disabled_hook_skips_sound(self, mock_log, mock_disabled, mock_play, mock_webhook):
         with patch("sys.argv", ["hooks.py", "--hook", "SessionStart"]):
             with self.assertRaises(SystemExit) as ctx:
                 hooks.main()
             self.assertEqual(ctx.exception.code, 0)
             mock_play.assert_not_called()
+            mock_webhook.assert_not_called()
 
+    @patch("hooks.send_webhook")
     @patch("hooks.play_sound")
     @patch("hooks.log_hook_data")
-    def test_no_args_exits_cleanly(self, mock_log, mock_play):
+    def test_no_args_exits_cleanly(self, mock_log, mock_play, mock_webhook):
         with patch("sys.argv", ["hooks.py"]):
             with self.assertRaises(SystemExit) as ctx:
                 hooks.main()
             self.assertEqual(ctx.exception.code, 0)
             mock_play.assert_not_called()
+            mock_webhook.assert_not_called()
 
 
 class TestSendWebhook(unittest.TestCase):
